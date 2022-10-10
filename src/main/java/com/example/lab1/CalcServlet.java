@@ -1,21 +1,17 @@
 package com.example.lab1;
 
 import lombok.SneakyThrows;
-import lombok.val;
-
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import javax.servlet.http.*;
 import java.io.IOException;
 import java.io.PrintWriter;
-
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -27,13 +23,24 @@ public class CalcServlet extends HttpServlet {
         List<String> oldHisotry = (List<String>) request.getSession().getAttribute("history");
         String s = oldHisotry.get(oldHisotry.size() - 1);
         request.getSession().setAttribute("history", history);
-        odpowiedz(s, response, request);
+        odpowiedz(s, response, request, "Witaj kolejny raz");
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+
+        String napis;
+        String nazwaCookie = "UserId";
+        Cookie [] cookies = request.getCookies();
         List<String> history = new ArrayList<>();
         HttpSession session = request.getSession();
+        AtomicInteger i= new AtomicInteger();
+        Arrays.stream(cookies).filter( cookie -> cookie.getName().equals(nazwaCookie)).forEach(cookie -> {
+            i.getAndIncrement();});
+        response.addCookie(new Cookie(nazwaCookie, "1"));
+        if(i.get()==0) napis="Witaj po raz pierwszy";
+        else napis="Witaj kolejny raz";
+
         String rezultat="";
         Double parameter1=null;
         Double parameter2=null;
@@ -67,7 +74,7 @@ public class CalcServlet extends HttpServlet {
                 history.add(rezultat+"<br>");
                 List<String> newHistory = Stream.concat(oldHistory.stream(), history.stream()).collect(Collectors.toList());
                 session.setAttribute("history", newHistory);
-                odpowiedz(rezultat, response, request);
+                odpowiedz(rezultat, response, request, napis);
 
             }
             else{
@@ -78,7 +85,7 @@ public class CalcServlet extends HttpServlet {
                 history.add(rezultat+"<br>");
                 List<String> newHistory = Stream.concat(oldHistory.stream(), history.stream()).collect(Collectors.toList());
                 session.setAttribute("history", newHistory);
-                odpowiedz(rezultat, response, request);
+                odpowiedz(rezultat, response, request, napis);
             }
         }
         else{
@@ -86,11 +93,8 @@ public class CalcServlet extends HttpServlet {
             if(oldHistory==null) oldHistory = new ArrayList<>();
             List<String> newHistory = Stream.concat(oldHistory.stream(), history.stream()).collect(Collectors.toList());
             session.setAttribute("history", newHistory);
-            odpowiedz(rezultat, response, request);
+            odpowiedz(rezultat, response, request, napis);
         }
-
-
-
 
     }
 
@@ -114,7 +118,7 @@ public class CalcServlet extends HttpServlet {
         return result;
     }
     @SneakyThrows
-    private void odpowiedz(String odpowiedz, HttpServletResponse response, HttpServletRequest request){
+    private void odpowiedz(String odpowiedz, HttpServletResponse response, HttpServletRequest request, String napis){
         response.setContentType("text/html;charset=UTF-8");
         PrintWriter out = response.getWriter();
         out.println("<!DOCTYPE html>");
@@ -123,6 +127,7 @@ public class CalcServlet extends HttpServlet {
         out.println("<title>Calculator</title>");
         out.println("</head>");
         out.println("<body>");
+        out.println("<h1>"+napis+"</h1><br>");
         out.println("<a href=http://localhost:8080/Lab1/>Powrót do formularza</a>");
         out.println("<a href=?clear=true >czysc historie</a>");
         out.println("<h1>Wynik</h1>");
