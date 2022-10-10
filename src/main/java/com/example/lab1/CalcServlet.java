@@ -1,8 +1,10 @@
 package com.example.lab1;
 
 import lombok.SneakyThrows;
+import lombok.val;
 
 
+import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -19,8 +21,14 @@ import java.util.stream.Stream;
 
 @WebServlet(name = "calcServlet", value = "/calc-servlet")
 public class CalcServlet extends HttpServlet {
-
-
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        List<String> history = new ArrayList<>();
+        List<String> oldHisotry = (List<String>) request.getSession().getAttribute("history");
+        String s = oldHisotry.get(oldHisotry.size() - 1);
+        request.getSession().setAttribute("history", history);
+        odpowiedz(s, response, request);
+    }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -52,27 +60,36 @@ public class CalcServlet extends HttpServlet {
 
         if(rezultat.equals("")){
             if(parameter2==0 && Objects.equals(operation, "/")) {
+                List<String> oldHistory = (List<String>) session.getAttribute("history");
+                if(oldHistory==null) oldHistory = new ArrayList<>();
                 rezultat = String.valueOf(parameter1) + " " + operation + " " + String.valueOf(parameter2) + " " +
                         " = " + "Nie dziel przez zero";
                 history.add(rezultat+"<br>");
-                odpowiedz(rezultat, response);
+                List<String> newHistory = Stream.concat(oldHistory.stream(), history.stream()).collect(Collectors.toList());
+                session.setAttribute("history", newHistory);
+                odpowiedz(rezultat, response, request);
 
             }
             else{
+                List<String> oldHistory = (List<String>) session.getAttribute("history");
+                if(oldHistory==null) oldHistory = new ArrayList<>();
                 rezultat = String.valueOf(parameter1) + " " + operation + " " + String.valueOf(parameter2) + " " +
                         " = " + String.valueOf(oblicz(parameter1, parameter2, operation));
                 history.add(rezultat+"<br>");
-                odpowiedz(rezultat, response);
+                List<String> newHistory = Stream.concat(oldHistory.stream(), history.stream()).collect(Collectors.toList());
+                session.setAttribute("history", newHistory);
+                odpowiedz(rezultat, response, request);
             }
         }
         else{
-            odpowiedz(rezultat, response);
-            history.add("Błędne dane<br>");
+            List<String> oldHistory = (List<String>) session.getAttribute("history");
+            if(oldHistory==null) oldHistory = new ArrayList<>();
+            List<String> newHistory = Stream.concat(oldHistory.stream(), history.stream()).collect(Collectors.toList());
+            session.setAttribute("history", newHistory);
+            odpowiedz(rezultat, response, request);
         }
 
-        List<String> oldHistory = (List<String>) session.getAttribute("history");
-        List<String> newHistory = Stream.concat(oldHistory.stream(), history.stream()).collect(Collectors.toList());
-        session.setAttribute("history", newHistory);
+
 
 
     }
@@ -97,7 +114,7 @@ public class CalcServlet extends HttpServlet {
         return result;
     }
     @SneakyThrows
-    private void odpowiedz(String odpowiedz, HttpServletResponse response){
+    private void odpowiedz(String odpowiedz, HttpServletResponse response, HttpServletRequest request){
         response.setContentType("text/html;charset=UTF-8");
         PrintWriter out = response.getWriter();
         out.println("<!DOCTYPE html>");
@@ -107,10 +124,12 @@ public class CalcServlet extends HttpServlet {
         out.println("</head>");
         out.println("<body>");
         out.println("<a href=http://localhost:8080/Lab1/>Powrót do formularza</a>");
-        out.println("<a href=????>czysc historie</a>");
+        out.println("<a href=?clear=true >czysc historie</a>");
         out.println("<h1>Wynik</h1>");
         out.println("<h2>" + odpowiedz + "</h2>");
         out.println("<h1>Historia</h1>");
+        List<String> history = (List<String>) request.getSession().getAttribute("history");
+        history.forEach(e -> out.println(e));
         out.println("</body>");
         out.println("</html>");
     }
